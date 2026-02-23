@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 import tkinter as tk
 from PIL import Image, ImageTk
 
@@ -25,6 +26,15 @@ IMAGE_TO_PIECES = {
 	"K": "chess_king_white.png",
 }
 
+@dataclass
+class GameState:
+	board: list
+	turn: str
+	castling: str
+	en_passant: str
+	halfmove: str
+	fullmove: str
+
 # Load and Cache images
 def load_piece_image(piece):
 	if piece not in _image_cache:
@@ -39,7 +49,7 @@ def load_piece_image(piece):
 def parseFEN(fenCode: str):
 	# Tokenize
 	board_state, turn, castling, en_passant, halfmove, fullmove = fenCode.split()
-
+	
 	# Each row represents a row on a chess board
 	board = []
 	for row in board_state.split('/'):
@@ -51,15 +61,53 @@ def parseFEN(fenCode: str):
 			else:
 				board_row.append(space)
 		board.append(board_row)
-	return board
+	return GameState(board, turn, castling, en_passant, halfmove, fullmove)
 
 class ChessGame:
-	def __init__(self,board):
+	def __init__(self, gameState: GameState):
 		print("ChessGame Created...")
 		self.root = tk.Tk() 
+		self.gameState = gameState
+
+		# Info panel
+		#  
+		self.info_panel = tk.Frame(
+			self.root, 
+			width=180, 
+			padx=15, 
+			pady=15, 
+			relief="ridge", 
+			borderwidth=2, 
+			bg="lightgray"
+		)
+		self.info_panel.grid(row=0, column=0, sticky="ns")
+
+		title = tk.Label(
+			self.info_panel,
+			text="Game Info",
+			font=("Arial", 18, "bold"),
+			bg="lightgray"
+		)
+		title.pack(anchor="w", pady=20)
+
+
+		# helper to make info lables
+		self.turn_label = tk.Label(self.info_panel, text=f"Turn: {self.gameState.turn}", font=("Arial", 16))
+		self.turn_label.pack(anchor="w", pady=20)
+		self.castling_label = tk.Label(self.info_panel, text=f"castling: {self.gameState.castling}", font=("Arial", 16))
+		self.castling_label.pack(anchor="w", pady=20)
+		self.en_passant_label = tk.Label(self.info_panel, text=f"en_passant: {self.gameState.en_passant}", font=("Arial", 16))
+		self.en_passant_label.pack(anchor="w", pady=20)
+		self.halfmove_label = tk.Label(self.info_panel, text=f"halfmove: {self.gameState.halfmove}", font=("Arial", 16))
+		self.halfmove_label.pack(anchor="w", pady=20)
+		self.fullmove_label = tk.Label(self.info_panel, text=f"fullmove: {self.gameState.fullmove}", font=("Arial", 16))
+		self.fullmove_label.pack(anchor="w", pady=20)
+
+		# Chess Board
 		self.canvas = tk.Canvas(self.root, width=640, height=640) 
-		self.canvas.pack()
-		self.board = board
+		self.canvas.grid(row=0, column=1, sticky="ns")
+
+
 		self.piece_ids = {}
 		self.drag_data = {
 			"item": None,
@@ -128,7 +176,7 @@ class ChessGame:
 				y2 = y1 + TILE_SIZE
 				self.canvas.create_rectangle(x1, y1, x2, y2, fill=color, outline=color)
 
-				piece = self.board[row][col]
+				piece = self.gameState.board[row][col]
 				if piece != "None":
 					try:
 						img = load_piece_image(piece)
