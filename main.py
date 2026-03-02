@@ -1,5 +1,6 @@
-from dataclasses import dataclass
+import os
 import tkinter as tk
+from dataclasses import dataclass
 from PIL import Image, ImageTk
 
 # GUI Properties
@@ -8,23 +9,28 @@ LIGHT = "#f0d9b5"
 DARK = "#b58863"
 TILE_SIZE = 80
 
-_image_cache = {}
+SCRIPT_DIR = os.path.dirname(__file__)
+ASSET_PATH = f"{SCRIPT_DIR}/assets"
+
 
 IMAGE_TO_PIECES = {
-	"p": "chess_pawn_black.png",
-	"r": "chess_rook_black.png",
-	"n": "chess_knight_black.png",
-	"b": "chess_bishop_black.png",
-	"q": "chess_queen_black.png",
-	"k": "chess_king_black.png",
+	"p": f"{ASSET_PATH}/chess_pawn_black.png",
+	"r": f"{ASSET_PATH}/chess_rook_black.png",
+	"n": f"{ASSET_PATH}/chess_knight_black.png",
+	"b": f"{ASSET_PATH}/chess_bishop_black.png",
+	"q": f"{ASSET_PATH}/chess_queen_black.png",
+	"k": f"{ASSET_PATH}/chess_king_black.png",
 
-	"P": "chess_pawn_white.png",
-	"R": "chess_rook_white.png",
-	"N": "chess_knight_white.png",
-	"B": "chess_bishop_white.png",
-	"Q": "chess_queen_white.png",
-	"K": "chess_king_white.png",
+	"P": f"{ASSET_PATH}/chess_pawn_white.png",
+	"R": f"{ASSET_PATH}/chess_rook_white.png",
+	"N": f"{ASSET_PATH}/chess_knight_white.png",
+	"B": f"{ASSET_PATH}/chess_bishop_white.png",
+	"Q": f"{ASSET_PATH}/chess_queen_white.png",
+	"K": f"{ASSET_PATH}/chess_king_white.png",
 }
+
+# Cache for making sure images get loaded only once
+_image_cache = {}
 
 @dataclass
 class GameState:
@@ -35,18 +41,38 @@ class GameState:
 	halfmove: str
 	fullmove: str
 
+	def toFEN(self):
+		ranks = []
+		for rank in self.board:
+			fen_rank = ""
+			empty = 0
+			for sq in rank:
+				if sq == "None":
+					empty+=1
+				else:
+					if empty > 0:
+						fen_rank += str(empty)
+						empty = 0
+					fen_rank += sq
+			if empty > 0:
+				fen_rank += str(empty)
+			ranks.append(fen_rank)
+		board_fen = "/".join(ranks)
+		return f"{board_fen} {self.turn} {self.castling} {self.en_passant} {self.halfmove} {self.fullmove}"
+
 # Load and Cache images
 def load_piece_image(piece):
 	if piece not in _image_cache:
 		filename = IMAGE_TO_PIECES[piece]
-		img = Image.open(f"assets/{filename}")
+		print(f"Loading image: {filename}")
+		img = Image.open(f"{filename}")
 		img = img.resize((TILE_SIZE, TILE_SIZE), Image.LANCZOS)
 		_image_cache[piece] = ImageTk.PhotoImage(img)
 	return _image_cache[piece]
 
 # Parse Forsyth-Edwards Notation (FEN)
 # Reference: https://www.chess.com/terms/fen-chess#what-is-fen
-def parseFEN(fenCode: str):
+def parseFEN(fenCode: str) -> GameState:
 	# Tokenize
 	board_state, turn, castling, en_passant, halfmove, fullmove = fenCode.split()
 	
@@ -202,7 +228,8 @@ class ChessGame:
 # Test FEN codes
 #code = "r3k2r/pppq1ppp/2n1bn2/3pp3/3PP3/2N1BN2/PPP2PPP/R3K2R w - - 10 12"
 STARTING_STATE = "nbrqkbrn/pppppppp/8/8/8/8/PPPPPPPP/NBRQKBRN w KQkq - 0 1"
+
 if __name__ == "__main__":
-	board = parseFEN(STARTING_STATE)
-	app = ChessGame(board)
+	gameState = parseFEN(STARTING_STATE)
+	app = ChessGame(gameState)
 	app.start()
